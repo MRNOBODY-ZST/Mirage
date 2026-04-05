@@ -20,6 +20,19 @@ jobs:
           java-version: '25'
           distribution: 'microsoft'
 
+      - name: Update version in gradle.properties
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "Updating mod_version to $VERSION"
+          sed -i "s/^mod_version=.*/mod_version=$VERSION/" gradle.properties
+          cat gradle.properties | grep mod_version
+
+      - name: Commit version update
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: bump version to ${{ github.ref_name }}"
+          file_pattern: gradle.properties
+
       - run: chmod +x ./gradlew
 
       - run: ./gradlew build
