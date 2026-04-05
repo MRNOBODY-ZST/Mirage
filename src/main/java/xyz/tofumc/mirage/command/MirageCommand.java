@@ -17,13 +17,21 @@ public class MirageCommand {
         dispatcher.register(Commands.literal("mirage")
             .then(Commands.literal("sync")
                 .requires(source -> hasPermission(source, PermissionLevel.ADMINS))
+                .then(Commands.literal("all")
+                    .executes(MirageCommand::executeSyncAll)
+                )
                 .then(Commands.argument("dimension", DimensionArgument.dimension())
                     .executes(MirageCommand::executeSync)
                 )
             )
             .then(Commands.literal("pull")
                 .requires(source -> hasPermission(source, PermissionLevel.ADMINS))
-                .executes(MirageCommand::executePull)
+                .then(Commands.literal("all")
+                    .executes(MirageCommand::executePullAll)
+                )
+                .then(Commands.argument("dimension", DimensionArgument.dimension())
+                    .executes(MirageCommand::executePull)
+                )
             )
             .then(Commands.literal("status")
                 .executes(MirageCommand::executeStatus)
@@ -64,9 +72,54 @@ public class MirageCommand {
         }
     }
 
+    private static int executeSyncAll(CommandContext<CommandSourceStack> context) {
+        Mirage mirage = Mirage.getInstance();
+        if (!mirage.isMainMode()) {
+            context.getSource().sendFailure(Component.literal("当前不是 main 模式"));
+            return 0;
+        }
+        if (mirage.getMainServerTask() == null) {
+            context.getSource().sendFailure(Component.literal("主服同步任务尚未初始化"));
+            return 0;
+        }
+
+        try {
+            int count = 0;
+            for (ServerLevel world : mirage.getServer().getAllLevels()) {
+                mirage.getMainServerTask().syncDimension(world);
+                count++;
+            }
+            int finalCount = count;
+            context.getSource().sendSuccess(() -> Component.literal("开始同步所有维度，共 " + finalCount + " 个"), true);
+            return 1;
+        } catch (Exception e) {
+            context.getSource().sendFailure(Component.literal("同步失败: " + e.getMessage()));
+            return 0;
+        }
+    }
+
     private static int executePull(CommandContext<CommandSourceStack> context) {
         Mirage mirage = Mirage.getInstance();
-        String result = mirage.requestPullForConfiguredDimensions();
+        if (!mirage.isMirrorMode()) {
+            context.getSource().sendFailure(Component.literal("当前不是 mirror 模式"));
+            return 0;
+        }
+
+        try {
+            ServerLevel world = DimensionArgument.getDimension(context, "dimension");
+            String dimensionId = world.dimension().identifier().toString();
+            String result = mirage.requestPullForDimension(dimensionId);
+            context.getSource().sendSuccess(() -> Component.literal(result), true);
+            return result.startsWith("已请求") ? 1 : 0;
+        } catch (Exception e) {
+            context.getSource().sendFailure(Component.literal("拉取失败: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int executePullAll(CommandContext<CommandSourceStack> context) {
+        Mirage mirage = Mirage.getInstance();
+        String result = mirage.requestPullForAllDimensions();
         context.getSource().sendSuccess(() -> Component.literal(result), true);
         return result.startsWith("已请求") ? 1 : 0;
     }

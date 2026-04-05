@@ -21,6 +21,7 @@ import xyz.tofumc.mirage.network.protocol.MessageType;
 import xyz.tofumc.mirage.network.server.MirageSyncServer;
 import xyz.tofumc.mirage.sync.MainServerTask;
 import xyz.tofumc.mirage.sync.MirrorApplyTask;
+import xyz.tofumc.mirage.sync.ScheduledSyncTask;
 import xyz.tofumc.mirage.sync.SyncState;
 
 import java.io.IOException;
@@ -42,6 +43,7 @@ public class Mirage implements ModInitializer {
     private MirageSyncClient syncClient;
     private MainServerTask mainServerTask;
     private MirrorApplyTask mirrorApplyTask;
+    private ScheduledSyncTask scheduledSyncTask;
 
     public Mirage() {
         instance = this;
@@ -73,10 +75,18 @@ public class Mirage implements ModInitializer {
             startSyncServer();
         } else if (isMirrorMode()) {
             startSyncClient();
+            if (config.getMirrorServer().isAutoSyncEnabled()) {
+                scheduledSyncTask = new ScheduledSyncTask(this);
+                scheduledSyncTask.start();
+            }
         }
     }
 
     private void handleServerStopping(MinecraftServer server) {
+        if (scheduledSyncTask != null) {
+            scheduledSyncTask.stop();
+            scheduledSyncTask = null;
+        }
         if (syncClient != null) {
             syncClient.disconnect();
             syncClient = null;
@@ -112,6 +122,7 @@ public class Mirage implements ModInitializer {
     public boolean reloadConfig() {
         try {
             config = configManager.load();
+            updateScheduledSync();
             return true;
         } catch (IOException e) {
             LOGGER.error("Failed to load Mirage config", e);
@@ -119,6 +130,18 @@ public class Mirage implements ModInitializer {
                 config = new MirageConfig();
             }
             return false;
+        }
+    }
+
+    private void updateScheduledSync() {
+        if (isMirrorMode() && config.getMirrorServer().isAutoSyncEnabled()) {
+            if (scheduledSyncTask == null) {
+                scheduledSyncTask = new ScheduledSyncTask(this);
+            }
+            scheduledSyncTask.start();
+        } else if (scheduledSyncTask != null) {
+            scheduledSyncTask.stop();
+            scheduledSyncTask = null;
         }
     }
 
@@ -174,6 +197,34 @@ public class Mirage implements ModInitializer {
             LOGGER.warn("Invalid dimension id: {}", dimensionId, e);
             return Optional.empty();
         }
+    }
+
+    public String requestPullForDimension(String dimensionId) {
+        if (!isMirrorMode()) {
+            return "Mirage 当前不是 mirror 模式";
+        }
+        if (syncClient == null || !syncClient.isConnected()) {
+            return "镜像服尚未连接到主服";
+        }
+        syncClient.send(MessageType.HASH_LIST_REQ, MessagePayloads.toBytes(new MessagePayloads.HashListRequestPayload(dimensionId)));
+        return "已请求拉取: " + dimensionId;
+    }
+
+    public String requestPullForAllDimensions() {
+        if (!isMirrorMode()) {
+            return "Mirage 当前不是 mirror 模式";
+        }
+        if (syncClient == null || !syncClient.isConnected()) {
+            return "镜像服尚未连接到主服";
+        }
+
+        List<String> requested = new ArrayList<>();
+        for (ServerLevel world : server.getAllLevels()) {
+            String dimensionId = world.dimension().identifier().toString();
+            syncClient.send(MessageType.HASH_LIST_REQ, MessagePayloads.toBytes(new MessagePayloads.HashListRequestPayload(dimensionId)));
+            requested.add(dimensionId);
+        }
+        return requested.isEmpty() ? "没有已加载的维度" : "已请求拉取所有维度: " + String.join(", ", requested);
     }
 
     public String requestPullForConfiguredDimensions() {

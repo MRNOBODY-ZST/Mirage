@@ -37,6 +37,8 @@ public class MirageConfig {
         private int mainPort = 25566;
         private String authToken = "change-me";
         private List<String> targetDimensions = List.of("minecraft:overworld");
+        private boolean autoSyncEnabled = false;
+        private int autoSyncIntervalMinutes = 30;
 
         public String getMainIp() {
             return mainIp;
@@ -52,6 +54,14 @@ public class MirageConfig {
 
         public List<String> getTargetDimensions() {
             return targetDimensions;
+        }
+
+        public boolean isAutoSyncEnabled() {
+            return autoSyncEnabled;
+        }
+
+        public int getAutoSyncIntervalMinutes() {
+            return autoSyncIntervalMinutes;
         }
     }
 }
