@@ -28,3 +28,13 @@ jobs:
         with:
           files: build/libs/*.jar
           generate_release_notes: true
+
+      - uses: Kira-NT/mc-publish@v3
+        with:
+          modrinth-id: 1of6iwqZ
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          files: build/libs/*.jar
+          version: ${{ github.ref_name }}
+          version-type: release
+          game-versions: 1.21.11
+          loaders: fabric
