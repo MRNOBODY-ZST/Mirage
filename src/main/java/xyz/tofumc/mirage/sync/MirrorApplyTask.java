@@ -9,6 +9,7 @@ import xyz.tofumc.mirage.hash.RegionHasher;
 import xyz.tofumc.mirage.network.protocol.MessagePayloads;
 import xyz.tofumc.mirage.network.protocol.MessageType;
 import xyz.tofumc.mirage.util.DimensionPathUtil;
+import xyz.tofumc.mirage.util.RegionFileUtil;
 import xyz.tofumc.mirage.world.ChunkUnloader;
 import xyz.tofumc.mirage.world.WorldSafetyManager;
 
@@ -180,5 +181,30 @@ public class MirrorApplyTask {
     }
 
     public record PendingSync(String dimension, ServerLevel world, Path regionDir, List<String> filesToDownload, List<String> filesToDelete) {
+    }
+
+    public void applyChunkSync(MessagePayloads.ChunkSyncResponsePayload payload) {
+        server.execute(() -> {
+            try {
+                ServerLevel world = requireWorld(payload.dimension());
+                Path regionDir = DimensionPathUtil.getRegionDir(server, world);
+                String mcaFileName = RegionFileUtil.getMcaFileName(payload.chunkX(), payload.chunkZ());
+                Path mcaFile = regionDir.resolve(mcaFileName);
+
+                byte[] chunkData = Base64.getDecoder().decode(payload.data());
+
+                WorldSafetyManager.forceSaveAndFlush(server);
+                ChunkUnloader.clearRegionCache(world);
+
+                Files.createDirectories(regionDir);
+                RegionFileUtil.writeChunkData(mcaFile, payload.chunkX(), payload.chunkZ(), chunkData);
+
+                ChunkUnloader.clearRegionCache(world);
+
+                Mirage.LOGGER.info("Applied chunk ({}, {}) for {}", payload.chunkX(), payload.chunkZ(), payload.dimension());
+            } catch (Exception e) {
+                Mirage.LOGGER.error("Failed to apply chunk ({}, {}) for {}", payload.chunkX(), payload.chunkZ(), payload.dimension(), e);
+            }
+        });
     }
 }

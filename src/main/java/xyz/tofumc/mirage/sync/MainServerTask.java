@@ -9,8 +9,11 @@ import xyz.tofumc.mirage.network.protocol.MessagePayloads;
 import xyz.tofumc.mirage.network.protocol.MessageType;
 import xyz.tofumc.mirage.network.server.MirageSyncServer;
 import xyz.tofumc.mirage.util.DimensionPathUtil;
+import xyz.tofumc.mirage.util.RegionFileUtil;
 import xyz.tofumc.mirage.world.WorldSafetyManager;
 
+import java.nio.file.Path;
+import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -70,5 +73,37 @@ public class MainServerTask {
 
     public String buildHashListPayloadJson(ServerLevel world) throws Exception {
         return GSON.toJson(buildHashListPayload(world));
+    }
+
+    public CompletableFuture<Void> syncChunk(ServerLevel world, int chunkX, int chunkZ) {
+        MirageSyncServer syncServer = Mirage.getInstance().getSyncServer();
+        if (syncServer == null) {
+            Mirage.LOGGER.warn("Sync server is not running");
+            return CompletableFuture.completedFuture(null);
+        }
+
+        return CompletableFuture.runAsync(() -> {
+            try {
+                flushWorldStateBeforeHash();
+                Path regionDir = DimensionPathUtil.getRegionDir(server, world);
+                String mcaFileName = RegionFileUtil.getMcaFileName(chunkX, chunkZ);
+                Path mcaFile = regionDir.resolve(mcaFileName);
+
+                byte[] chunkData = RegionFileUtil.readChunkData(mcaFile, chunkX, chunkZ);
+                if (chunkData == null) {
+                    Mirage.LOGGER.warn("Chunk ({}, {}) not found in {}", chunkX, chunkZ, mcaFileName);
+                    return;
+                }
+
+                String encoded = Base64.getEncoder().encodeToString(chunkData);
+                MessagePayloads.ChunkSyncResponsePayload payload = new MessagePayloads.ChunkSyncResponsePayload(
+                    world.dimension().identifier().toString(), chunkX, chunkZ, encoded
+                );
+                syncServer.broadcast(syncServer.encode(MessageType.CHUNK_SYNC_RESP, MessagePayloads.toBytes(payload)));
+                Mirage.LOGGER.info("Broadcasted chunk ({}, {}) from {}", chunkX, chunkZ, world.dimension().identifier());
+            } catch (Exception e) {
+                Mirage.LOGGER.error("Chunk sync failed for ({}, {})", chunkX, chunkZ, e);
+            }
+        });
     }
 }

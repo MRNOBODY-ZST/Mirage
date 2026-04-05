@@ -1,6 +1,7 @@
 package xyz.tofumc.mirage.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -20,6 +21,15 @@ public class MirageCommand {
                 .then(Commands.literal("all")
                     .executes(MirageCommand::executeSyncAll)
                 )
+                .then(Commands.literal("chunk")
+                    .then(Commands.argument("dimension", DimensionArgument.dimension())
+                        .then(Commands.argument("chunkX", IntegerArgumentType.integer())
+                            .then(Commands.argument("chunkZ", IntegerArgumentType.integer())
+                                .executes(MirageCommand::executeSyncChunk)
+                            )
+                        )
+                    )
+                )
                 .then(Commands.argument("dimension", DimensionArgument.dimension())
                     .executes(MirageCommand::executeSync)
                 )
@@ -28,6 +38,15 @@ public class MirageCommand {
                 .requires(source -> hasPermission(source, PermissionLevel.ADMINS))
                 .then(Commands.literal("all")
                     .executes(MirageCommand::executePullAll)
+                )
+                .then(Commands.literal("chunk")
+                    .then(Commands.argument("dimension", DimensionArgument.dimension())
+                        .then(Commands.argument("chunkX", IntegerArgumentType.integer())
+                            .then(Commands.argument("chunkZ", IntegerArgumentType.integer())
+                                .executes(MirageCommand::executePullChunk)
+                            )
+                        )
+                    )
                 )
                 .then(Commands.argument("dimension", DimensionArgument.dimension())
                     .executes(MirageCommand::executePull)
@@ -122,6 +141,51 @@ public class MirageCommand {
         String result = mirage.requestPullForAllDimensions();
         context.getSource().sendSuccess(() -> Component.literal(result), true);
         return result.startsWith("已请求") ? 1 : 0;
+    }
+
+    private static int executeSyncChunk(CommandContext<CommandSourceStack> context) {
+        Mirage mirage = Mirage.getInstance();
+        if (!mirage.isMainMode()) {
+            context.getSource().sendFailure(Component.literal("当前不是 main 模式"));
+            return 0;
+        }
+        if (mirage.getMainServerTask() == null) {
+            context.getSource().sendFailure(Component.literal("主服同步任务尚未初始化"));
+            return 0;
+        }
+
+        try {
+            ServerLevel world = DimensionArgument.getDimension(context, "dimension");
+            int chunkX = IntegerArgumentType.getInteger(context, "chunkX");
+            int chunkZ = IntegerArgumentType.getInteger(context, "chunkZ");
+            mirage.getMainServerTask().syncChunk(world, chunkX, chunkZ);
+            context.getSource().sendSuccess(() -> Component.literal("开始同步区块: (" + chunkX + ", " + chunkZ + ") @ " + world.dimension().identifier()), true);
+            return 1;
+        } catch (Exception e) {
+            context.getSource().sendFailure(Component.literal("区块同步失败: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int executePullChunk(CommandContext<CommandSourceStack> context) {
+        Mirage mirage = Mirage.getInstance();
+        if (!mirage.isMirrorMode()) {
+            context.getSource().sendFailure(Component.literal("当前不是 mirror 模式"));
+            return 0;
+        }
+
+        try {
+            ServerLevel world = DimensionArgument.getDimension(context, "dimension");
+            int chunkX = IntegerArgumentType.getInteger(context, "chunkX");
+            int chunkZ = IntegerArgumentType.getInteger(context, "chunkZ");
+            String dimensionId = world.dimension().identifier().toString();
+            String result = mirage.requestPullChunk(dimensionId, chunkX, chunkZ);
+            context.getSource().sendSuccess(() -> Component.literal(result), true);
+            return result.startsWith("已请求") ? 1 : 0;
+        } catch (Exception e) {
+            context.getSource().sendFailure(Component.literal("区块拉取失败: " + e.getMessage()));
+            return 0;
+        }
     }
 
     private static int executeStatus(CommandContext<CommandSourceStack> context) {

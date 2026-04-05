@@ -242,4 +242,15 @@ public class Mirage implements ModInitializer {
         }
         return requested.isEmpty() ? "未配置任何目标维度" : "已请求拉取: " + String.join(", ", requested);
     }
+
+    public String requestPullChunk(String dimensionId, int chunkX, int chunkZ) {
+        if (!isMirrorMode()) {
+            return "Mirage 当前不是 mirror 模式";
+        }
+        if (syncClient == null || !syncClient.isConnected()) {
+            return "镜像服尚未连接到主服";
+        }
+        syncClient.send(MessageType.CHUNK_SYNC_REQ, MessagePayloads.toBytes(new MessagePayloads.ChunkSyncRequestPayload(dimensionId, chunkX, chunkZ)));
+        return "已请求拉取区块: (" + chunkX + ", " + chunkZ + ") @ " + dimensionId;
+    }
 }

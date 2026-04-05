@@ -9,6 +9,7 @@ import xyz.tofumc.mirage.network.protocol.MessageType;
 import xyz.tofumc.mirage.network.protocol.MirageProtocol;
 import xyz.tofumc.mirage.sync.MainServerTask;
 import xyz.tofumc.mirage.util.DimensionPathUtil;
+import xyz.tofumc.mirage.util.RegionFileUtil;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -47,6 +48,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
             switch (message.getType()) {
                 case HASH_LIST_REQ -> handleHashListRequest(ctx, message);
                 case FILE_SYNC_START -> handleFileSyncStart(ctx, message);
+                case CHUNK_SYNC_REQ -> handleChunkSyncRequest(ctx, message);
                 default -> Mirage.LOGGER.warn("Unknown message type: {}", message.getType());
             }
         } finally {
@@ -128,6 +130,38 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
             Mirage.LOGGER.info("Finished sending files for {}", payload.dimension());
         } catch (Exception e) {
             Mirage.LOGGER.error("Failed to handle file sync start", e);
+        }
+    }
+
+    private void handleChunkSyncRequest(ChannelHandlerContext ctx, MirageProtocol.Message message) {
+        try {
+            MessagePayloads.ChunkSyncRequestPayload payload = MessagePayloads.fromJson(message.getPayload(), MessagePayloads.ChunkSyncRequestPayload.class);
+            if (payload == null) {
+                return;
+            }
+            var world = mirage.getLevel(payload.dimension()).orElse(null);
+            if (world == null) {
+                Mirage.LOGGER.warn("Unknown requested dimension {}", payload.dimension());
+                return;
+            }
+            Path regionDir = DimensionPathUtil.getRegionDir(mirage.getServer(), world);
+            String mcaFileName = RegionFileUtil.getMcaFileName(payload.chunkX(), payload.chunkZ());
+            Path mcaFile = regionDir.resolve(mcaFileName);
+
+            byte[] chunkData = RegionFileUtil.readChunkData(mcaFile, payload.chunkX(), payload.chunkZ());
+            if (chunkData == null) {
+                Mirage.LOGGER.warn("Chunk ({}, {}) not found in {}", payload.chunkX(), payload.chunkZ(), mcaFileName);
+                return;
+            }
+
+            String encoded = Base64.getEncoder().encodeToString(chunkData);
+            MessagePayloads.ChunkSyncResponsePayload response = new MessagePayloads.ChunkSyncResponsePayload(
+                payload.dimension(), payload.chunkX(), payload.chunkZ(), encoded
+            );
+            server.send(ctx.channel(), MessageType.CHUNK_SYNC_RESP, MessagePayloads.toBytes(response));
+            Mirage.LOGGER.info("Sent chunk ({}, {}) for {} to {}", payload.chunkX(), payload.chunkZ(), payload.dimension(), ctx.channel().remoteAddress());
+        } catch (Exception e) {
+            Mirage.LOGGER.error("Failed to handle chunk sync request", e);
         }
     }
 

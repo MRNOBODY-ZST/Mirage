@@ -39,4 +39,10 @@ public final class MessagePayloads {
 
     public record SyncDonePayload(String dimension, boolean success) {
     }
+
+    public record ChunkSyncRequestPayload(String dimension, int chunkX, int chunkZ) {
+    }
+
+    public record ChunkSyncResponsePayload(String dimension, int chunkX, int chunkZ, String data) {
+    }
 }

@@ -31,6 +31,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
                 case HASH_LIST_RESP -> handleHashListResponse(message);
                 case FILE_CHUNK -> handleFileChunk(message);
                 case SYNC_DONE -> handleSyncDone(message);
+                case CHUNK_SYNC_RESP -> handleChunkSyncResponse(message);
                 default -> Mirage.LOGGER.warn("Unknown message type: {}", message.getType());
             }
         } finally {
@@ -77,6 +78,18 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
         MessagePayloads.SyncDonePayload payload = MessagePayloads.fromJson(message.getPayload(), MessagePayloads.SyncDonePayload.class);
         if (payload != null) {
             task.handleSyncDone(payload);
+        }
+    }
+
+    private void handleChunkSyncResponse(MirageProtocol.Message message) {
+        MirrorApplyTask task = mirage.getMirrorApplyTask();
+        if (task == null) {
+            Mirage.LOGGER.warn("MirrorApplyTask unavailable");
+            return;
+        }
+        MessagePayloads.ChunkSyncResponsePayload payload = MessagePayloads.fromJson(message.getPayload(), MessagePayloads.ChunkSyncResponsePayload.class);
+        if (payload != null) {
+            task.applyChunkSync(payload);
         }
     }
 

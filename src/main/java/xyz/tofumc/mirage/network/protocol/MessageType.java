@@ -6,7 +6,9 @@ public enum MessageType {
     HASH_LIST_RESP(2),
     FILE_SYNC_START(3),
     FILE_CHUNK(4),
-    SYNC_DONE(5);
+    SYNC_DONE(5),
+    CHUNK_SYNC_REQ(6),
+    CHUNK_SYNC_RESP(7);
 
     private final int id;
 
