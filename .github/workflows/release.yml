@@ -52,10 +52,9 @@ jobs:
         with:
           modrinth-id: 1of6iwqZ
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          files: build/libs/mirage-*.jar
-          primary-file: build/libs/mirage-${{ steps.version.outputs.version }}.jar
+          files-primary: build/libs/mirage-${{ steps.version.outputs.version }}.jar
+          files-secondary: build/libs/mirage-${{ steps.version.outputs.version }}-sources.jar
           version: ${{ github.ref_name }}
           version-type: release
           game-versions: 1.21.11
           loaders: fabric
-          additional-files: build/libs/mirage-${{ steps.version.outputs.version }}-sources.jar
