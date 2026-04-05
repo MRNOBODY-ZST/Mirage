@@ -20,18 +20,24 @@ jobs:
           java-version: '25'
           distribution: 'microsoft'
 
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Extracted version: $VERSION"
+
       - name: Update version in gradle.properties
         run: |
-          VERSION="${GITHUB_REF#refs/tags/}"
-          echo "Updating mod_version to $VERSION"
-          sed -i "s/^mod_version=.*/mod_version=$VERSION/" gradle.properties
+          sed -i "s/^mod_version=.*/mod_version=${{ steps.version.outputs.version }}/" gradle.properties
           cat gradle.properties | grep mod_version
 
       - name: Commit version update
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore: bump version to ${{ github.ref_name }}"
+          commit_message: "chore: bump version to ${{ steps.version.outputs.version }}"
           file_pattern: gradle.properties
+          branch: main
 
       - run: chmod +x ./gradlew
 
@@ -46,8 +52,10 @@ jobs:
         with:
           modrinth-id: 1of6iwqZ
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          files: build/libs/*.jar
+          files: build/libs/mirage-*.jar
+          primary-file: build/libs/mirage-${{ steps.version.outputs.version }}.jar
           version: ${{ github.ref_name }}
           version-type: release
           game-versions: 1.21.11
           loaders: fabric
+          additional-files: build/libs/mirage-${{ steps.version.outputs.version }}-sources.jar
