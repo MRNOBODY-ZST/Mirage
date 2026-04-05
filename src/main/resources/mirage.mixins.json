@@ -1,0 +1,19 @@
+{
+	"required": true,
+	"package": "xyz.tofumc.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"ServerWorldAccessor",
+		"ServerChunkManagerAccessor",
+		"ThreadedAnvilChunkStorageAccessor",
+		"SimpleRegionStorageAccessor",
+		"IOWorkerAccessor",
+		"RegionFileStorageAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

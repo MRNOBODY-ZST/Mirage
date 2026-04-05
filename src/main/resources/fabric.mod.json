@@ -1,0 +1,35 @@
+{
+	"schemaVersion": 1,
+	"id": "mirage",
+	"version": "${version}",
+	"name": "Mirage",
+	"description": "Incremental dimension region sync between a main Minecraft server and one or more mirror servers.",
+	"authors": [
+		"TofuMC"
+	],
+	"contact": {},
+	"license": "All-Rights-Reserved",
+	"icon": "assets/mirage/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"xyz.tofumc.Mirage"
+		],
+		"client": [
+			"xyz.tofumc.MirageClient"
+		]
+	},
+	"mixins": [
+		"mirage.mixins.json",
+		{
+			"config": "mirage.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
