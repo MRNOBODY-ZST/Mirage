@@ -48,17 +48,17 @@ jobs:
           files: build/libs/*.jar
           generate_release_notes: true
 
-      - uses: Kira-NT/mc-publish@v3
-        with:
-          modrinth-id: 1of6iwqZ
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+      # - uses: Kira-NT/mc-publish@v3
+      #   with:
+      #     modrinth-id: 1of6iwqZ
+      #     modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
 
-          curseforge-id: 1505496
-          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+      #     curseforge-id: 1505496
+      #     curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
 
-          files-primary: build/libs/mirage-${{ steps.version.outputs.version }}.jar
-          files-secondary: build/libs/mirage-${{ steps.version.outputs.version }}-sources.jar
-          version: ${{ github.ref_name }}
-          version-type: release
-          game-versions: 1.21.11
-          loaders: fabric
+      #     files-primary: build/libs/mirage-${{ steps.version.outputs.version }}.jar
+      #     files-secondary: build/libs/mirage-${{ steps.version.outputs.version }}-sources.jar
+      #     version: ${{ github.ref_name }}
+      #     version-type: release
+      #     game-versions: 1.21.11
+      #     loaders: fabric
