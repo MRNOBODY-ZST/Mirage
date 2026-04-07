@@ -8,7 +8,7 @@
 [![Fabric](https://img.shields.io/badge/Fabric_Mod-blue)](https://fabricmc.net)
 [![Java](https://img.shields.io/badge/Java-21+-orange)](https://adoptium.net)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Build](https://img.shields.io/github/actions/workflow/status/hades-0/Mirage/build.yml?branch=main)](https://github.com/MRNOBODY-ZST/Mirage/actions/workflows/build.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/MRNOBODY-ZST/Mirage/build.yml?branch=main)](https://github.com/MRNOBODY-ZST/Mirage/actions/workflows/build.yml)
 
 [中文说明](README_zh.md)
 
@@ -286,7 +286,7 @@ Bug reports and feature requests are welcome. Please open an issue before submit
 ### Development setup
 
 ```bash
-git clone https://github.com/hades-0/Mirage.git
+git clone https://github.com/MRNOBODY-ZST/Mirage.git
 cd Mirage
 ./gradlew build   # verify it compiles
 ```

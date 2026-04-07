@@ -8,7 +8,7 @@
 [![Fabric](https://img.shields.io/badge/Fabric_Mod-blue)](https://fabricmc.net)
 [![Java](https://img.shields.io/badge/Java-21+-orange)](https://adoptium.net)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Build](https://img.shields.io/github/actions/workflow/status/hades-0/Mirage/build.yml?branch=main)](https://github.com/hades-0/Mirage/actions/workflows/build.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/MRNOBODY-ZST/Mirage/build.yml?branch=main)](https://github.com/MRNOBODY-ZST/Mirage/actions/workflows/build.yml)
 
 [English](README.md)
 
@@ -286,7 +286,7 @@ src/main/java/xyz/tofumc/
 ### 开发环境搭建
 
 ```bash
-git clone https://github.com/hades-0/Mirage.git
+git clone https://github.com/MRNOBODY-ZST/Mirage.git
 cd Mirage
 ./gradlew build   # 验证编译通过
 ```
