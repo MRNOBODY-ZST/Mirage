@@ -34,27 +34,27 @@
 ```mermaid
 flowchart LR
     subgraph Main["主服务器"]
-        MS[ServerLevel<br/>世界"]
-        RH[RegionHasher<br/>SHA-256"]
-        SS[MirageSyncServer<br/>Netty TCP :25566"]
-        SM[MainServerTask<br/>广播哈希"]
+        MS[ServerLevel 世界]
+        RH[RegionHasher SHA-256]
+        SS[MirageSyncServer<br/>Netty TCP :25566]
+        SM[MainServerTask 广播哈希]
     end
 
     subgraph Mirror["镜像服务器"]
-        MR[ServerLevel<br/>世界"]
-        DC[DeltaComparator<br/>差异计算"]
-        FT[FileTransferManager<br/>原子移动"]
-        SC[MirageSyncClient<br/>TCP 客户端"]
-        MA[MirrorApplyTask<br/>应用变更"]
+        MR[ServerLevel 世界]
+        DC[DeltaComparator 差异计算]
+        FT[FileTransferManager 原子移动]
+        SC[MirageSyncClient TCP 客户端]
+        MA[MirrorApplyTask 应用变更]
     end
 
-    MS -->|"刷盘 + 保存"| RH
+    MS -->|"刷盘保存"| RH
     RH -->|"哈希列表"| SS
     SS -.->|"HASH_LIST_RESP"| SC
     SC -->|"FILE_SYNC_START"| DC
     DC -->|"文件列表"| SS
     SS -.->|"FILE_CHUNK"| SC
-    SC -->|"写入临时 .mca"| FT
+    SC -->|"写入临时mca"| FT
     FT -->|"原子移动"| MR
     MA -->|"踢出玩家"| MR
     MA -->|"清除缓存"| MR

@@ -34,27 +34,27 @@
 ```mermaid
 flowchart LR
     subgraph Main["Main Server"]
-        MS[ServerLevel<br/>world"]
-        RH[RegionHasher<br/>SHA-256"]
-        SS[MirageSyncServer<br/>Netty TCP :25566"]
-        SM[MainServerTask<br/>broadcasts hashes"]
+        MS[ServerLevel world]
+        RH[RegionHasher SHA-256]
+        SS[MirageSyncServer<br/>Netty TCP :25566]
+        SM[MainServerTask broadcasts hashes]
     end
 
     subgraph Mirror["Mirror Server"]
-        MR[ServerLevel<br/>world"]
-        DC[DeltaComparator<br/>diff"]
-        FT[FileTransferManager<br/>atomic move"]
-        SC[MirageSyncClient<br/>TCP client"]
-        MA[MirrorApplyTask<br/>applies changes"]
+        MR[ServerLevel world]
+        DC[DeltaComparator diff]
+        FT[FileTransferManager atomic move]
+        SC[MirageSyncClient TCP client]
+        MA[MirrorApplyTask applies changes]
     end
 
-    MS -->|"flush + save"| RH
+    MS -->|"flush save"| RH
     RH -->|"hash map"| SS
     SS -.->|"HASH_LIST_RESP"| SC
     SC -->|"FILE_SYNC_START"| DC
     DC -->|"file list"| SS
     SS -.->|"FILE_CHUNK"| SC
-    SC -->|"write temp .mca"| FT
+    SC -->|"write temp mca"| FT
     FT -->|"atomic move"| MR
     MA -->|"kick players"| MR
     MA -->|"clear cache"| MR
