@@ -8,7 +8,7 @@
 		"TofuMC"
 	],
 	"contact": {},
-	"license": "All-Rights-Reserved",
+	"license": "MIT",
 	"icon": "assets/mirage/icon.png",
 	"environment": "*",
 	"entrypoints": {
