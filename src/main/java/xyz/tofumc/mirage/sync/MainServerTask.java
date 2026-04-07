@@ -10,6 +10,7 @@ import xyz.tofumc.mirage.network.protocol.MessageType;
 import xyz.tofumc.mirage.network.server.MirageSyncServer;
 import xyz.tofumc.mirage.util.DimensionPathUtil;
 import xyz.tofumc.mirage.util.RegionFileUtil;
+import xyz.tofumc.mirage.util.SyncLogger;
 import xyz.tofumc.mirage.world.WorldSafetyManager;
 
 import java.nio.file.Path;
@@ -30,12 +31,12 @@ public class MainServerTask {
     public CompletableFuture<Void> syncDimension(ServerLevel world) {
         MirageSyncServer syncServer = Mirage.getInstance().getSyncServer();
         if (syncServer == null) {
-            Mirage.LOGGER.warn("Sync server is not running");
+            SyncLogger.warn("Sync server is not running");
             return CompletableFuture.completedFuture(null);
         }
         if (!syncState.tryStartSync()) {
             long remaining = syncState.getRemainingCooldown() / 1000;
-            Mirage.LOGGER.warn("Sync already in progress or cooldown active ({} seconds remaining)", remaining);
+            SyncLogger.warn("Sync already in progress or cooldown active ({} seconds remaining)", remaining);
             return CompletableFuture.completedFuture(null);
         }
 
@@ -43,9 +44,9 @@ public class MainServerTask {
             try {
                 MessagePayloads.HashListResponsePayload payload = buildHashListPayload(world);
                 syncServer.broadcast(syncServer.encode(MessageType.HASH_LIST_RESP, MessagePayloads.toBytes(payload)));
-                Mirage.LOGGER.info("Broadcasted {} file hashes for {}", payload.hashes().size(), payload.dimension());
+                SyncLogger.info("Broadcasted {} file hashes for {}", payload.hashes().size(), payload.dimension());
             } catch (Exception e) {
-                Mirage.LOGGER.error("Sync failed", e);
+                SyncLogger.error("Sync failed", e);
             } finally {
                 syncState.endSync();
             }
@@ -78,7 +79,7 @@ public class MainServerTask {
     public CompletableFuture<Void> syncChunk(ServerLevel world, int chunkX, int chunkZ) {
         MirageSyncServer syncServer = Mirage.getInstance().getSyncServer();
         if (syncServer == null) {
-            Mirage.LOGGER.warn("Sync server is not running");
+            SyncLogger.warn("Sync server is not running");
             return CompletableFuture.completedFuture(null);
         }
 
@@ -91,7 +92,7 @@ public class MainServerTask {
 
                 byte[] chunkData = RegionFileUtil.readChunkData(mcaFile, chunkX, chunkZ);
                 if (chunkData == null) {
-                    Mirage.LOGGER.warn("Chunk ({}, {}) not found in {}", chunkX, chunkZ, mcaFileName);
+                    SyncLogger.warn("Chunk ({}, {}) not found in {}", chunkX, chunkZ, mcaFileName);
                     return;
                 }
 
@@ -100,9 +101,9 @@ public class MainServerTask {
                     world.dimension().identifier().toString(), chunkX, chunkZ, encoded
                 );
                 syncServer.broadcast(syncServer.encode(MessageType.CHUNK_SYNC_RESP, MessagePayloads.toBytes(payload)));
-                Mirage.LOGGER.info("Broadcasted chunk ({}, {}) from {}", chunkX, chunkZ, world.dimension().identifier());
+                SyncLogger.info("Broadcasted chunk ({}, {}) from {}", chunkX, chunkZ, world.dimension().identifier());
             } catch (Exception e) {
-                Mirage.LOGGER.error("Chunk sync failed for ({}, {})", chunkX, chunkZ, e);
+                SyncLogger.error("Chunk sync failed for ({}, {})", chunkX, chunkZ, e);
             }
         });
     }

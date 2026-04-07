@@ -1,16 +1,21 @@
 package xyz.tofumc.mirage.sync;
 
+import xyz.tofumc.Mirage;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class SyncState {
     private final AtomicBoolean syncing = new AtomicBoolean(false);
     private final AtomicLong lastSyncTime = new AtomicLong(0);
-    private static final long COOLDOWN_MS = 30000; // 30 seconds
+
+    private long getCooldownMs() {
+        return Mirage.getInstance().getConfig().getSyncCooldownSeconds() * 1000L;
+    }
 
     public boolean tryStartSync() {
         long now = System.currentTimeMillis();
-        if (now - lastSyncTime.get() < COOLDOWN_MS) {
+        if (now - lastSyncTime.get() < getCooldownMs()) {
             return false;
         }
 
@@ -31,7 +36,7 @@ public class SyncState {
 
     public long getRemainingCooldown() {
         long elapsed = System.currentTimeMillis() - lastSyncTime.get();
-        long remaining = COOLDOWN_MS - elapsed;
+        long remaining = getCooldownMs() - elapsed;
         return Math.max(0, remaining);
     }
 }

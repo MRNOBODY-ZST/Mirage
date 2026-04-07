@@ -10,6 +10,8 @@ import xyz.tofumc.mirage.network.protocol.MirageProtocol;
 import xyz.tofumc.mirage.sync.MainServerTask;
 import xyz.tofumc.mirage.util.DimensionPathUtil;
 import xyz.tofumc.mirage.util.RegionFileUtil;
+import xyz.tofumc.mirage.world.ChunkUnloader;
+import xyz.tofumc.mirage.world.WorldSafetyManager;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -144,6 +146,20 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
                 Mirage.LOGGER.warn("Unknown requested dimension {}", payload.dimension());
                 return;
             }
+
+            // Flush world state and clear region cache on the server thread before reading
+            java.util.concurrent.CompletableFuture<Void> future = new java.util.concurrent.CompletableFuture<>();
+            mirage.getServer().execute(() -> {
+                try {
+                    WorldSafetyManager.forceSaveAndFlush(mirage.getServer());
+                    ChunkUnloader.clearRegionCache(world);
+                    future.complete(null);
+                } catch (Exception e) {
+                    future.completeExceptionally(e);
+                }
+            });
+            future.join();
+
             Path regionDir = DimensionPathUtil.getRegionDir(mirage.getServer(), world);
             String mcaFileName = RegionFileUtil.getMcaFileName(payload.chunkX(), payload.chunkZ());
             Path mcaFile = regionDir.resolve(mcaFileName);

@@ -23,8 +23,8 @@ public class MirageCommand {
                 )
                 .then(Commands.literal("chunk")
                     .then(Commands.argument("dimension", DimensionArgument.dimension())
-                        .then(Commands.argument("chunkX", IntegerArgumentType.integer())
-                            .then(Commands.argument("chunkZ", IntegerArgumentType.integer())
+                        .then(Commands.argument("x", IntegerArgumentType.integer())
+                            .then(Commands.argument("z", IntegerArgumentType.integer())
                                 .executes(MirageCommand::executeSyncChunk)
                             )
                         )
@@ -41,8 +41,8 @@ public class MirageCommand {
                 )
                 .then(Commands.literal("chunk")
                     .then(Commands.argument("dimension", DimensionArgument.dimension())
-                        .then(Commands.argument("chunkX", IntegerArgumentType.integer())
-                            .then(Commands.argument("chunkZ", IntegerArgumentType.integer())
+                        .then(Commands.argument("x", IntegerArgumentType.integer())
+                            .then(Commands.argument("z", IntegerArgumentType.integer())
                                 .executes(MirageCommand::executePullChunk)
                             )
                         )
@@ -156,10 +156,12 @@ public class MirageCommand {
 
         try {
             ServerLevel world = DimensionArgument.getDimension(context, "dimension");
-            int chunkX = IntegerArgumentType.getInteger(context, "chunkX");
-            int chunkZ = IntegerArgumentType.getInteger(context, "chunkZ");
+            int blockX = IntegerArgumentType.getInteger(context, "x");
+            int blockZ = IntegerArgumentType.getInteger(context, "z");
+            int chunkX = blockX >> 4;
+            int chunkZ = blockZ >> 4;
             mirage.getMainServerTask().syncChunk(world, chunkX, chunkZ);
-            context.getSource().sendSuccess(() -> Component.literal("开始同步区块: (" + chunkX + ", " + chunkZ + ") @ " + world.dimension().identifier()), true);
+            context.getSource().sendSuccess(() -> Component.literal("开始同步区块: (" + chunkX + ", " + chunkZ + ") [坐标 " + blockX + ", " + blockZ + "] @ " + world.dimension().identifier()), true);
             return 1;
         } catch (Exception e) {
             context.getSource().sendFailure(Component.literal("区块同步失败: " + e.getMessage()));
@@ -176,11 +178,13 @@ public class MirageCommand {
 
         try {
             ServerLevel world = DimensionArgument.getDimension(context, "dimension");
-            int chunkX = IntegerArgumentType.getInteger(context, "chunkX");
-            int chunkZ = IntegerArgumentType.getInteger(context, "chunkZ");
+            int blockX = IntegerArgumentType.getInteger(context, "x");
+            int blockZ = IntegerArgumentType.getInteger(context, "z");
+            int chunkX = blockX >> 4;
+            int chunkZ = blockZ >> 4;
             String dimensionId = world.dimension().identifier().toString();
             String result = mirage.requestPullChunk(dimensionId, chunkX, chunkZ);
-            context.getSource().sendSuccess(() -> Component.literal(result), true);
+            context.getSource().sendSuccess(() -> Component.literal(result + " [坐标 " + blockX + ", " + blockZ + "]"), true);
             return result.startsWith("已请求") ? 1 : 0;
         } catch (Exception e) {
             context.getSource().sendFailure(Component.literal("区块拉取失败: " + e.getMessage()));

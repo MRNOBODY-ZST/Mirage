@@ -4,11 +4,16 @@ import java.util.List;
 
 public class MirageConfig {
     private String mode = "main";
+    private int syncCooldownSeconds = 30;
     private MainServerConfig mainServer = new MainServerConfig();
     private MirrorServerConfig mirrorServer = new MirrorServerConfig();
 
     public String getMode() {
         return mode;
+    }
+
+    public int getSyncCooldownSeconds() {
+        return syncCooldownSeconds;
     }
 
     public MainServerConfig getMainServer() {

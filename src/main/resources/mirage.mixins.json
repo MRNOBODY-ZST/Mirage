@@ -8,7 +8,8 @@
 		"ThreadedAnvilChunkStorageAccessor",
 		"SimpleRegionStorageAccessor",
 		"IOWorkerAccessor",
-		"RegionFileStorageAccessor"
+		"RegionFileStorageAccessor",
+		"ChunkMapAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -1,7 +1,20 @@
 package xyz.tofumc.mirage.sync;
 
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
+import net.minecraft.world.level.chunk.PalettedContainerFactory;
+import net.minecraft.world.level.chunk.ProtoChunk;
+import net.minecraft.world.level.chunk.storage.RegionFileVersion;
+import net.minecraft.world.level.chunk.storage.SerializableChunkData;
 import xyz.tofumc.Mirage;
 import xyz.tofumc.mirage.hash.DeltaComparator;
 import xyz.tofumc.mirage.hash.FileTransferManager;
@@ -10,9 +23,13 @@ import xyz.tofumc.mirage.network.protocol.MessagePayloads;
 import xyz.tofumc.mirage.network.protocol.MessageType;
 import xyz.tofumc.mirage.util.DimensionPathUtil;
 import xyz.tofumc.mirage.util.RegionFileUtil;
+import xyz.tofumc.mirage.util.SyncLogger;
 import xyz.tofumc.mirage.world.ChunkUnloader;
 import xyz.tofumc.mirage.world.WorldSafetyManager;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
@@ -36,15 +53,15 @@ public class MirrorApplyTask {
         PendingSync current = pendingSync;
         if (current != null) {
             if (current.dimension().equals(payload.dimension())) {
-                Mirage.LOGGER.info("Ignoring duplicate hash list while sync is already active for {}", payload.dimension());
+                SyncLogger.info("Ignoring duplicate hash list while sync is already active for {}", payload.dimension());
                 return CompletableFuture.completedFuture(null);
             }
-            Mirage.LOGGER.warn("Sync already in progress for {}, ignoring {}", current.dimension(), payload.dimension());
+            SyncLogger.warn("Sync already in progress for {}, ignoring {}", current.dimension(), payload.dimension());
             return CompletableFuture.completedFuture(null);
         }
 
         if (!syncState.tryStartSync()) {
-            Mirage.LOGGER.warn("Sync already in progress");
+            SyncLogger.warn("Sync already in progress");
             return CompletableFuture.completedFuture(null);
         }
 
@@ -69,10 +86,10 @@ public class MirrorApplyTask {
                     pendingSync.filesToDelete()
                 );
                 Mirage.getInstance().getSyncClient().send(MessageType.FILE_SYNC_START, MessagePayloads.toBytes(request));
-                Mirage.LOGGER.info("Requested {} files for {}", pendingSync.filesToDownload().size(), payload.dimension());
+                SyncLogger.info("Requested {} files for {}", pendingSync.filesToDownload().size(), payload.dimension());
             } catch (Exception e) {
                 syncState.endSync();
-                Mirage.LOGGER.error("Failed to process hash list", e);
+                SyncLogger.error("Failed to process hash list", e);
             }
         });
     }
@@ -80,7 +97,7 @@ public class MirrorApplyTask {
     public void handleFileChunk(MessagePayloads.FileChunkPayload payload) {
         PendingSync current = pendingSync;
         if (current == null || !current.dimension().equals(payload.dimension())) {
-            Mirage.LOGGER.warn("Ignoring file chunk for unexpected dimension {}", payload.dimension());
+            SyncLogger.warn("Ignoring file chunk for unexpected dimension {}", payload.dimension());
             return;
         }
 
@@ -90,10 +107,10 @@ public class MirrorApplyTask {
             Files.createDirectories(tempFile.getParent());
             FileTransferManager.writeChunk(tempFile, data, payload.offset());
             if (payload.eof()) {
-                Mirage.LOGGER.info("Received file {} for {}", payload.file(), payload.dimension());
+                SyncLogger.info("Received file {} for {}", payload.file(), payload.dimension());
             }
         } catch (Exception e) {
-            Mirage.LOGGER.error("Failed to write file chunk for {}", payload.file(), e);
+            SyncLogger.error("Failed to write file chunk for {}", payload.file(), e);
         }
     }
 
@@ -119,9 +136,9 @@ public class MirrorApplyTask {
 
                 ChunkUnloader.clearRegionCache(current.world());
 
-                Mirage.LOGGER.info("Sync completed successfully for {}", current.dimension());
+                SyncLogger.info("Sync completed successfully for {}", current.dimension());
             } catch (Exception e) {
-                Mirage.LOGGER.error("Failed to finalize sync for {}", current.dimension(), e);
+                SyncLogger.error("Failed to finalize sync for {}", current.dimension(), e);
             } finally {
                 WorldSafetyManager.setSaveState(current.world(), true);
                 pendingSync = null;
@@ -162,7 +179,7 @@ public class MirrorApplyTask {
                         Path target = regionDir.resolve(source.getFileName());
                         FileTransferManager.atomicMove(source, target);
                     } catch (Exception e) {
-                        Mirage.LOGGER.error("Failed to move file {}", source, e);
+                        SyncLogger.error("Failed to move file {}", source, e);
                     }
                 });
         }
@@ -173,9 +190,9 @@ public class MirrorApplyTask {
             try {
                 Path file = regionDir.resolve(filename);
                 Files.deleteIfExists(file);
-                Mirage.LOGGER.info("Deleted obsolete file: {}", filename);
+                SyncLogger.info("Deleted obsolete file: {}", filename);
             } catch (Exception e) {
-                Mirage.LOGGER.error("Failed to delete file {}", filename, e);
+                SyncLogger.error("Failed to delete file {}", filename, e);
             }
         }
     }
@@ -187,24 +204,86 @@ public class MirrorApplyTask {
         server.execute(() -> {
             try {
                 ServerLevel world = requireWorld(payload.dimension());
-                Path regionDir = DimensionPathUtil.getRegionDir(server, world);
-                String mcaFileName = RegionFileUtil.getMcaFileName(payload.chunkX(), payload.chunkZ());
-                Path mcaFile = regionDir.resolve(mcaFileName);
+                byte[] rawData = Base64.getDecoder().decode(payload.data());
 
-                byte[] chunkData = Base64.getDecoder().decode(payload.data());
+                // Parse raw MCA chunk data (4-byte length + 1-byte compression type + compressed NBT)
+                CompoundTag nbt = parseChunkNbt(rawData);
 
-                WorldSafetyManager.forceSaveAndFlush(server);
-                ChunkUnloader.clearRegionCache(world);
+                // Check if the chunk is currently loaded in memory
+                ChunkMap chunkMap = world.getChunkSource().chunkMap;
+                long chunkKey = ChunkPos.asLong(payload.chunkX(), payload.chunkZ());
+                var chunkHolder = ((xyz.tofumc.mixin.ChunkMapAccessor) chunkMap).invokeGetVisibleChunkIfPresent(chunkKey);
+                LevelChunk loadedChunk = chunkHolder != null ? chunkHolder.getTickingChunk() : null;
 
-                Files.createDirectories(regionDir);
-                RegionFileUtil.writeChunkData(mcaFile, payload.chunkX(), payload.chunkZ(), chunkData);
+                if (loadedChunk != null) {
+                    // Chunk is loaded — replace block data in memory directly
+                    PalettedContainerFactory factory = PalettedContainerFactory.create(server.registryAccess());
+                    SerializableChunkData chunkData = SerializableChunkData.parse(world, factory, nbt);
+                    ProtoChunk protoChunk = chunkData.read(world, world.getPoiManager(),
+                        world.getChunkSource().chunkMap.storageInfo(), new ChunkPos(payload.chunkX(), payload.chunkZ()));
 
-                ChunkUnloader.clearRegionCache(world);
+                    // Replace sections in the live chunk
+                    LevelChunkSection[] newSections = protoChunk.getSections();
+                    LevelChunkSection[] liveSections = loadedChunk.getSections();
+                    for (int i = 0; i < liveSections.length && i < newSections.length; i++) {
+                        liveSections[i] = newSections[i];
+                    }
 
-                Mirage.LOGGER.info("Applied chunk ({}, {}) for {}", payload.chunkX(), payload.chunkZ(), payload.dimension());
+                    // Clear and re-add block entities
+                    loadedChunk.getBlockEntities().keySet().stream().toList()
+                        .forEach(loadedChunk::removeBlockEntity);
+                    protoChunk.getBlockEntityNbts().forEach((pos, tag) -> {
+                        loadedChunk.setBlockEntityNbt(tag);
+                    });
+
+                    // Mark chunk as needing save
+                    loadedChunk.markUnsaved();
+
+                    // Resend chunk to all tracking players
+                    ClientboundLevelChunkWithLightPacket packet = new ClientboundLevelChunkWithLightPacket(
+                        loadedChunk, world.getLightEngine(), null, null
+                    );
+                    List<ServerPlayer> players = chunkMap.getPlayers(
+                        new ChunkPos(payload.chunkX(), payload.chunkZ()), false
+                    );
+                    for (ServerPlayer player : players) {
+                        player.connection.send(packet);
+                    }
+
+                    SyncLogger.info("Applied chunk ({}, {}) in-memory for {}", payload.chunkX(), payload.chunkZ(), payload.dimension());
+                } else {
+                    // Chunk not loaded — write to disk
+                    Path regionDir = DimensionPathUtil.getRegionDir(server, world);
+                    String mcaFileName = RegionFileUtil.getMcaFileName(payload.chunkX(), payload.chunkZ());
+                    Path mcaFile = regionDir.resolve(mcaFileName);
+
+                    ChunkUnloader.clearRegionCache(world);
+
+                    Files.createDirectories(regionDir);
+                    RegionFileUtil.writeChunkData(mcaFile, payload.chunkX(), payload.chunkZ(), rawData);
+
+                    ChunkUnloader.clearRegionCache(world);
+
+                    SyncLogger.info("Applied chunk ({}, {}) to disk for {}", payload.chunkX(), payload.chunkZ(), payload.dimension());
+                }
             } catch (Exception e) {
-                Mirage.LOGGER.error("Failed to apply chunk ({}, {}) for {}", payload.chunkX(), payload.chunkZ(), payload.dimension(), e);
+                SyncLogger.error("Failed to apply chunk ({}, {}) for {}", payload.chunkX(), payload.chunkZ(), payload.dimension(), e);
             }
         });
+    }
+
+    /**
+     * Parse raw MCA chunk data into a CompoundTag.
+     * Raw format: 4-byte length (big-endian) + 1-byte compression type + compressed NBT.
+     */
+    private CompoundTag parseChunkNbt(byte[] rawData) throws Exception {
+        // Skip 4-byte length prefix
+        int compressionType = rawData[4] & 0xFF;
+        byte[] compressedNbt = new byte[rawData.length - 5];
+        System.arraycopy(rawData, 5, compressedNbt, 0, compressedNbt.length);
+
+        InputStream is = new ByteArrayInputStream(compressedNbt);
+        InputStream decompressed = RegionFileVersion.fromId(compressionType).wrap(is);
+        return NbtIo.read(new DataInputStream(decompressed), NbtAccounter.unlimitedHeap());
     }
 }
