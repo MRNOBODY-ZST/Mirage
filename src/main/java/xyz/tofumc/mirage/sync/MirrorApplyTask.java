@@ -211,7 +211,7 @@ public class MirrorApplyTask {
 
                 // Check if the chunk is currently loaded in memory
                 ChunkMap chunkMap = world.getChunkSource().chunkMap;
-                long chunkKey = ChunkPos.asLong(payload.chunkX(), payload.chunkZ());
+                long chunkKey = ChunkPos.pack(payload.chunkX(), payload.chunkZ());
                 var chunkHolder = ((xyz.tofumc.mixin.ChunkMapAccessor) chunkMap).invokeGetVisibleChunkIfPresent(chunkKey);
                 LevelChunk loadedChunk = chunkHolder != null ? chunkHolder.getTickingChunk() : null;
 

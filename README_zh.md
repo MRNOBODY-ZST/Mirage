@@ -4,7 +4,7 @@
 
 *一款 Minecraft Fabric 模组，用于在主服务器和一个或多个镜像服务器之间进行增量的、实时的维度区域同步。*
 
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.21.11-green)](https://minecraft.net)
+[![Minecraft](https://img.shields.io/badge/Minecraft-26.3-green)](https://minecraft.net)
 [![Fabric](https://img.shields.io/badge/Fabric_Mod-blue)](https://fabricmc.net)
 [![Java](https://img.shields.io/badge/Java-21+-orange)](https://adoptium.net)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -101,10 +101,10 @@ sequenceDiagram
 
 | 组件 | 版本 |
 |------|------|
-| Minecraft | 1.21.11 |
-| Fabric Loader | ≥ 0.18.4 |
-| Fabric API | 0.141.3+1.21.11 |
-| Java | ≥ 21 |
+| Minecraft | 26.3 |
+| Fabric Loader | ≥ 0.19.5 |
+| Fabric API | 0.161.0+26.3 |
+| Java | ≥ 25 |
 
 ---
 
@@ -120,7 +120,7 @@ sequenceDiagram
 
 2. **在主服务器和镜像服务器上安装**
    - 将 jar 文件放入各服务器 `mods/` 目录。
-   - 两台服务器必须运行相同的 Minecraft 版本（1.21.11）。
+   - 两台服务器必须运行相同的 Minecraft 版本（26.3）。
 
 3. **首次启动**
    - 启动一次服务器，`config/mirage.json` 会自动生成。
@@ -268,7 +268,7 @@ src/main/java/xyz/tofumc/
 
 产物位置：`build/libs/mirage-<version>.jar`
 
-版本号从 `gradle.properties` 中的 `mod_version` 读取（当前版本 **1.2.0**）。
+版本号从 `gradle.properties` 中的 `mod_version` 读取（当前版本 **1.3.0+mc26.3**）。
 
 ### 持续集成 / 持续部署
 
@@ -318,4 +318,4 @@ cd Mirage
 
 ---
 
-*Mirage — TofuMC · Minecraft 1.21.11 · Fabric*
+*Mirage — TofuMC · Minecraft 26.3 · Fabric*

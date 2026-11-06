@@ -6,8 +6,10 @@ import net.minecraft.world.level.chunk.storage.RegionFileStorage;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
+import java.util.Optional;
+
 @Mixin(RegionFileStorage.class)
 public interface RegionFileStorageAccessor {
     @Accessor("regionCache")
-    Long2ObjectLinkedOpenHashMap<RegionFile> getRegionCache();
+    Long2ObjectLinkedOpenHashMap<Optional<RegionFile>> getRegionCache();
 }

@@ -4,7 +4,7 @@
 
 *A Minecraft Fabric mod for incremental, real-time dimension region synchronization between a main server and one or more mirror servers.*
 
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.21.11-green)](https://minecraft.net)
+[![Minecraft](https://img.shields.io/badge/Minecraft-26.3-green)](https://minecraft.net)
 [![Fabric](https://img.shields.io/badge/Fabric_Mod-blue)](https://fabricmc.net)
 [![Java](https://img.shields.io/badge/Java-21+-orange)](https://adoptium.net)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -101,10 +101,10 @@ sequenceDiagram
 
 | Component | Version |
 |-----------|---------|
-| Minecraft | 1.21.11 |
-| Fabric Loader | ≥ 0.18.4 |
-| Fabric API | 0.141.3+1.21.11 |
-| Java | ≥ 21 |
+| Minecraft | 26.3 |
+| Fabric Loader | ≥ 0.19.5 |
+| Fabric API | 0.161.0+26.3 |
+| Java | ≥ 25 |
 
 ---
 
@@ -120,7 +120,7 @@ sequenceDiagram
 
 2. **Install on both main and mirror servers**
    - Place the jar into each server's `mods/` folder.
-   - Both servers must run the same Minecraft version (1.21.11).
+   - Both servers must run the same Minecraft version (26.3).
 
 3. **First launch**
    - Start the server once. `config/mirage.json` is auto-generated.
@@ -268,7 +268,7 @@ src/main/java/xyz/tofumc/
 
 Artifact: `build/libs/mirage-<version>.jar`
 
-The version is read from `gradle.properties` (`mod_version`, currently **1.2.0**).
+The version is read from `gradle.properties` (`mod_version`, currently **1.3.0+mc26.3**).
 
 ### CI/CD
 
@@ -318,4 +318,4 @@ Fabric API is declared as a dependency in `fabric.mod.json` with `*` version, me
 
 ---
 
-*Mirage — TofuMC · Minecraft 1.21.11 · Fabric*
+*Mirage — TofuMC · Minecraft 26.3 · Fabric*

@@ -16,6 +16,7 @@ import xyz.tofumc.mixin.ThreadedAnvilChunkStorageAccessor;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class ChunkUnloader {
     public static void forceUnloadAll(ServerLevel world) throws IOException {
@@ -47,10 +48,21 @@ public class ChunkUnloader {
             RegionFileStorage storage = ((IOWorkerAccessor) worker).getStorage();
 
             @SuppressWarnings("unchecked")
-            Long2ObjectLinkedOpenHashMap<RegionFile> regionCache =
+            Long2ObjectLinkedOpenHashMap<Optional<RegionFile>> regionCache =
                 ((RegionFileStorageAccessor) (Object) storage).getRegionCache();
 
-            List<RegionFile> toClose = new ArrayList<>(regionCache.values());
+            // 26.2 stores RegionFile directly; 26.3+ stores Optional<RegionFile> (erased to the same raw map)
+            List<RegionFile> toClose = new ArrayList<>();
+            for (Object entry : regionCache.values()) {
+                if (entry instanceof Optional<?> optional) {
+                    Object value = optional.orElse(null);
+                    if (value instanceof RegionFile regionFile) {
+                        toClose.add(regionFile);
+                    }
+                } else if (entry instanceof RegionFile regionFile) {
+                    toClose.add(regionFile);
+                }
+            }
             regionCache.clear();
 
             int count = 0;
